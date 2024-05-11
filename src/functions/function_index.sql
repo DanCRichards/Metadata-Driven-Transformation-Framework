@@ -10,16 +10,17 @@ DROP TYPE IF EXISTS function_name CASCADE;  -- Drop existing enum type if it exi
  CREATE TYPE function_name AS ENUM (
     'direct_assignment',
     'safe_to_timestamp',
-    'return_boolean',
+    'str_to_boolean',
     'return_enum'
 );
 
 -- Inserting predefined functions into the functions table
+TRUNCATE TABLE functions CASCADE;
 INSERT INTO functions (function_name, function_definition)
 VALUES
     ('direct_assignment', 'Directly assigns values without transformation'),
     ('safe_to_timestamp', 'Converts string to timestamp safely'),
-    ('return_boolean', 'Returns a fixed boolean value'),
+    ('str_to_boolean', 'Returns a fixed boolean value'),
     ('return_enum', 'Returns a specified enum value');
 
 SELECT * FROM functions
@@ -28,6 +29,7 @@ SELECT * FROM functions
 
 CALL process_notes_transformation();
 
+SELECT * FROM target_mapping
 
 SELECT tm.target_column_name, tm.function_name, im.source_table_name, im.source_column_name, jm.join_type, jm.join_condition
                   FROM target_mapping tm
@@ -37,4 +39,4 @@ SELECT tm.target_column_name, tm.function_name, im.source_table_name, im.source_
 
 
 SET SEARCH_PATH =mtf_staging;
-INSERT INTO mtf_staging.notes ("QuestionnaireResponseId", "Note", "Note", "CreatedTimeStamp", "CreatedTimeStamp", "SoftDeleted", "CreatedByUserAuth0Id", "userCreated", "userCreated", "NoteType") SELECT  direct_assignment(dbo.questionnaire_response."QuestionnaireResponseId") AS "QuestionnaireResponseId",  direct_assignment(landing.notes.details) AS "Note",  direct_assignment(landing.notes.details) AS "Note",  safe_to_timestamp(landing.notes."dateCreated") AS "CreatedTimeStamp",  safe_to_timestamp(landing.notes."dateCreated") AS "CreatedTimeStamp",  return_boolean(""."false") AS "SoftDeleted",  direct_assignment("staging.users"."UserAuth0Id") AS "CreatedByUserAuth0Id",  direct_assignment("landing.notes"."userCreated") AS "userCreated",  direct_assignment("landing.notes"."userCreated") AS "userCreated",  return_enum(""."Private") AS "NoteType" FROM landing.notes  INNER JOIN "landing.notes" ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  LEFT JOIN "landing.notes" ON landing.notes.userCreated = staging.users.BubbleGateuserId  INNER JOIN "landing.notes" ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  LEFT JOIN "landing.notes" ON landing.notes.userCreated = staging.users.BubbleGateuserId  INNER JOIN "landing.notes" ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  LEFT JOIN "landing.notes" ON landing.notes.userCreated = staging.users.BubbleGateuserId ;
+INSERT INTO staging.notes ("QuestionnaireResponseId", "Note", "Note", "CreatedTimeStamp", "CreatedTimeStamp", "SoftDeleted", "CreatedByUserAuth0Id", "userCreated", "userCreated", "NoteType") SELECT  direct_assignment(dbo.questionnaire_response."QuestionnaireResponseId") AS "QuestionnaireResponseId",  direct_assignment(landing.notes.details) AS "Note",  direct_assignment(landing.notes.details) AS "Note",  safe_to_timestamp(landing.notes."dateCreated") AS "CreatedTimeStamp",  safe_to_timestamp(landing.notes."dateCreated") AS "CreatedTimeStamp",  str_to_boolean(."false") AS "SoftDeleted",  direct_assignment(staging.users."UserAuth0Id") AS "CreatedByUserAuth0Id",  direct_assignment(landing.notes."userCreated") AS "userCreated",  direct_assignment(landing.notes."userCreated") AS "userCreated",  return_enum(."Private") AS "NoteType" FROM landing.notes  INNER JOIN landing.notes ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  INNER JOIN landing.notes ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  LEFT JOIN landing.notes ON landing.notes.userCreated = staging.users.BubbleGateuserId  LEFT JOIN landing.notes ON landing.notes.userCreated = staging.users.BubbleGateuserId  INNER JOIN landing.notes ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  INNER JOIN landing.notes ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  LEFT JOIN landing.notes ON landing.notes.userCreated = staging.users.BubbleGateuserId  LEFT JOIN landing.notes ON landing.notes.userCreated = staging.users.BubbleGateuserId  INNER JOIN landing.notes ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  INNER JOIN landing.notes ON landing.notes.personal_id = dbo.questionnaire_response.PersonalId  LEFT JOIN landing.notes ON landing.notes.userCreated = staging.users.BubbleGateuserId  LEFT JOIN landing.notes ON landing.notes.userCreated = staging.users.BubbleGateuserId ;

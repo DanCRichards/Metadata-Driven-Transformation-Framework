@@ -1,3 +1,4 @@
+SET SEARCH_PATH=mtf;
 CREATE OR REPLACE FUNCTION direct_assignment(input_value ANYELEMENT) RETURNS ANYELEMENT AS $$
 BEGIN
     RETURN input_value;

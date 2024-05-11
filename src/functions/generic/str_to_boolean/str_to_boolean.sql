@@ -1,3 +1,4 @@
+SET search_path TO mtf;
 CREATE OR REPLACE FUNCTION str_to_boolean(input_text TEXT) RETURNS BOOLEAN AS $$
 BEGIN
     -- Normalize the input text to lower case for case-insensitive comparison
