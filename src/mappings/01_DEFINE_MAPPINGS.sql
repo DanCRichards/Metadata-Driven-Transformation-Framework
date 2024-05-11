@@ -65,10 +65,19 @@ CREATE TABLE input_mapping
 -- Join Mappings table using transformation natural keys
 CREATE TABLE join_mappings
 (
+    join_mapping_key TEXT PRIMARY KEY,  -- Human-readable, string-based identifier
     source_table_name TEXT,
     target_table_name TEXT,
-    join_type join_type,
-    join_condition TEXT,
-    FOREIGN KEY (source_table_name, target_table_name) REFERENCES transformations(source_table_name, target_table_name) ON DELETE CASCADE,
-    PRIMARY KEY (source_table_name, target_table_name, join_condition)
+    join_type join_type,  -- ENUM type for join methods such as 'INNER', 'LEFT', etc.
+    FOREIGN KEY (source_table_name, target_table_name) REFERENCES transformations(source_table_name, target_table_name) ON DELETE CASCADE
+);
+
+CREATE TABLE join_conditions_mapping
+(
+    condition_id SERIAL PRIMARY KEY,
+    join_mapping_id INT NOT NULL,
+    lhs_column TEXT NOT NULL,  -- Left-hand side of the condition, typically a column name
+    rhs_column TEXT NOT NULL,  -- Right-hand side of the condition, can be a column name or a literal value
+    operator TEXT NOT NULL CHECK (operator IN ('=', '!=', '<', '>', '<=', '>=')), -- Comparison operator
+    FOREIGN KEY (join_mapping_id) REFERENCES join_mappings(join_mapping_key) ON DELETE CASCADE
 );

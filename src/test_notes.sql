@@ -26,7 +26,7 @@ VALUES
     ('staging.notes', 'SoftDeleted', 'str_to_boolean', 'landing.notes'),
     ('staging.notes', 'CreatedByUserAuth0Id', 'direct_assignment', 'landing.notes'),
     ('staging.notes', 'userCreated', 'direct_assignment', 'landing.notes'),
-    ('staging.notes', 'NoteType', 'return_enum', 'landing.notes');
+    ('staging.notes', 'NoteType', 'direct_assignment', 'landing.notes');
 
 -- Inserting input mappings, ensuring they reference the target mapping directly
 INSERT INTO input_mapping (target_table_name, target_column_name, source_table_name, source_column_name, input_order, in_group_by)

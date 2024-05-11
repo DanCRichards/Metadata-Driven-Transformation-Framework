@@ -27,23 +27,14 @@ BEGIN
             target_list := target_list || quote_ident(record.target_column_name) || ', ';
         END IF;
 
-        -- Build source list using function if applicable
-        IF record.function_name IS NOT NULL THEN
-            IF record.source_table_name IS NOT NULL AND record.source_column_name IS NOT NULL THEN
-                source_list := source_list || ' ' || record.function_name || '(' || record.source_table_name || '.' || quote_ident(record.source_column_name) || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
-            ELSIF record.source_column_name IS NOT NULL OR TRIM(record.source_column_name) != '' THEN
-                -- Handling case where there's a function, but no table name (treating source_column_name as a constant or predefined value)
-                source_list := source_list || ' ' || record.function_name || '(' || quote_literal(record.source_column_name) || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
-            END IF;
+        IF record.source_table_name IS NOT NULL AND TRIM(record.source_table_name) <> '' THEN
+            -- When there is a source_table_name, build using table and column
+            source_list := source_list || ' ' || record.function_name || '(' || record.source_table_name || '.' || quote_ident(record.source_column_name) || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
         ELSE
-            -- No function, build normal source list
-            IF record.source_table_name IS NOT NULL AND record.source_column_name IS NOT NULL THEN
-                source_list := source_list || ' ' || record.source_table_name || '.' || quote_ident(record.source_column_name) || ' AS ' || quote_ident(record.target_column_name) || ', ';
-            ELSIF record.source_column_name IS NOT NULL THEN
-                -- No table name, use the column name directly (assuming it's a literal or constant)
-                source_list := source_list || ' ' || quote_literal(record.source_column_name) || ' AS ' || quote_ident(record.target_column_name) || ', ';
-            END IF;
+            -- Handling case where there's a function, but no table name (treating source_column_name as a constant or predefined value)
+            source_list := source_list || ' ' || record.function_name || '(' || quote_literal(record.source_column_name) || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
         END IF;
+
 
         -- Add joins if applicable
         IF record.join_type IS NOT NULL AND record.join_condition IS NOT NULL AND record.source_table_name IS NOT NULL THEN
