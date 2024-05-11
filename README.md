@@ -8,3 +8,7 @@ Want to use a data driven approach to creating your transformation logic? This f
 ## Problems 
 - Have multiple inputs that are of a similar nature, but have different column names or have some level of complexity.
 
+
+## Diagram 
+
+![Diagram of Meta Data Driven Framework](docs/assets/mtfdiagram.png)

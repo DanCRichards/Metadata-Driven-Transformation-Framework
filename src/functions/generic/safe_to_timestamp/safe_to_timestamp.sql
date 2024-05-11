@@ -1,0 +1,8 @@
+CREATE OR REPLACE FUNCTION safe_to_timestamp(text, text)
+RETURNS TIMESTAMP AS $$
+BEGIN
+    RETURN TO_TIMESTAMP($1, $2);
+EXCEPTION WHEN others THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;

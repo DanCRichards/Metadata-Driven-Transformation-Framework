@@ -1,64 +1,74 @@
 CREATE SCHEMA IF NOT EXISTS mtf; -- meta transformation framework
+SET SEARCH_PATH = mtf;
 
-SET SEARCH_PATH=mtf;
+-- Drop existing tables and types if they exist
+DROP TABLE IF EXISTS join_mappings;
+DROP TABLE IF EXISTS input_mapping;
+DROP TABLE IF EXISTS target_mapping;
+DROP TABLE IF EXISTS transformations;
+DROP TABLE IF EXISTS function_inputs;
+DROP TABLE IF EXISTS functions CASCADE;
+DROP TYPE IF EXISTS join_type CASCADE;
 
-CREATE TABLE IF NOT EXISTS functions
+-- Recreate enum for join types
+CREATE TYPE join_type AS ENUM ('INNER', 'LEFT', 'RIGHT', 'FULL JOIN');
+
+-- Functions table
+CREATE TABLE functions
 (
-    function_id SERIAL PRIMARY KEY,
-    function_name TEXT,
+    function_name function_name PRIMARY KEY,
     function_definition TEXT  -- Stores the SQL or pseudo code defining the function
 );
 
-CREATE TABLE IF NOT EXISTS function_inputs
+-- Function Inputs table, maintains use of a SERIAL primary key for input uniqueness
+CREATE TABLE function_inputs
 (
     input_id SERIAL PRIMARY KEY,
-    function_id INT REFERENCES functions(function_id),
+    function_name function_name REFERENCES functions(function_name),
     input_order INT,
     input_data_type TEXT
 );
 
-
-CREATE TABLE IF NOT EXISTS target_mapping
+-- Transformations table using natural keys
+CREATE TABLE transformations
 (
-    target_mapping_id SERIAL PRIMARY KEY,
+    source_table_name TEXT,
     target_table_name TEXT,
-    target_column_name TEXT,
-    function_id INT REFERENCES functions(function_id)
+    description TEXT,
+    PRIMARY KEY (source_table_name, target_table_name)
 );
 
-
-CREATE TABLE IF NOT EXISTS input_mapping
+-- Target Mapping table using natural keys
+CREATE TABLE target_mapping
 (
-    input_mapping_id SERIAL PRIMARY KEY,
-    target_mapping_id INT REFERENCES target_mapping(target_mapping_id),
+    target_table_name TEXT,
+    target_column_name TEXT,
+    function_name function_name REFERENCES functions(function_name),
+    source_table_name TEXT,
+    PRIMARY KEY (target_table_name, target_column_name),
+    FOREIGN KEY (source_table_name, target_table_name) REFERENCES transformations(source_table_name, target_table_name) ON DELETE CASCADE
+);
+
+-- Input Mapping table using references to target mapping natural keys
+CREATE TABLE input_mapping
+(
+    target_table_name TEXT,
+    target_column_name TEXT,
     source_table_name TEXT,
     source_column_name TEXT,
     input_order INT,
-    in_group_by BOOLEAN DEFAULT FALSE  -- Indicates if this input is part of a GROUP BY
+    in_group_by BOOLEAN DEFAULT FALSE, -- Indicates if this input is part of a GROUP BY
+    PRIMARY KEY (target_table_name, target_column_name, source_table_name, source_column_name, input_order),
+    FOREIGN KEY (target_table_name, target_column_name) REFERENCES target_mapping(target_table_name, target_column_name) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS transformations
+-- Join Mappings table using transformation natural keys
+CREATE TABLE join_mappings
 (
-    transformation_id SERIAL PRIMARY KEY,
     source_table_name TEXT,
     target_table_name TEXT,
-    description TEXT
-);
-
-CREATE TYPE JOIN_TYPE AS ENUM
-(
-    'INNER',
-    'LEFT',
-    'RIGHT',
-    'FULL JOIN'
-);
-
-CREATE TABLE IF NOT EXISTS join_mappings
-(
-    join_id SERIAL PRIMARY KEY,
-    transformation_id INT REFERENCES transformations(transformation_id),
-    join_type JOIN_TYPE,  -- Examples: 'INNER JOIN', 'LEFT JOIN', etc.
-    source_table_name TEXT,
-    target_table_name TEXT,  -- Optional, depending on the transformation logic
-    join_condition TEXT
+    join_type join_type,
+    join_condition TEXT,
+    FOREIGN KEY (source_table_name, target_table_name) REFERENCES transformations(source_table_name, target_table_name) ON DELETE CASCADE,
+    PRIMARY KEY (source_table_name, target_table_name, join_condition)
 );
