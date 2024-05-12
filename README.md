@@ -2,7 +2,7 @@
   <picture>
     <img alt="The Rust Programming Language: A language empowering everyone to build reliable and efficient software"
          src="docs/assets/mtf_logo.png"
-         width="50%">
+         width="25%">
   </picture>
 </div>
 
