@@ -48,7 +48,7 @@ VALUES
     ('staging.notes', 'NoteType', '', 'Private', 1, TRUE);  -- Assuming 'Private' is a constant for enum
 
 
-    call perform_transformation('test_notes')
+    call perform_transformation('test_notes');
 
 
     SELECT * FROM staging.notes
