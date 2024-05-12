@@ -7,22 +7,24 @@
 </div>
 
 # MTF - Metadata-Driven Transformation Framework 
-A Postgres program that enables users to create transformation logic using a data driven approach.
 
 ## TL;DR
-Don't use code for your transformations. Use data.
+A Postgres program that enables users to create transformation logic using a data driven approach.
+> Don't use code for your transformations. Use data.
 
 ## Introduction
 Want to use a data driven approach to creating your transformation logic? This framework is for you.
+This means you can define your transformation logic without writing huge  this means you can easily change your transformation logic without having to change your code.
 
-### Problem it is trying to solve
-- Have multiple inputs that are of a similar nature, but have different column names or have some level of complexity.
-- Allowing for a SQL Code first approach to generating transformation logic, and allowing for the leveraging of information schema. 
+### Benefits
+- Define transformation logic using data
+  - This makes your logic queryable & easily modifiable
+- Extract the transformation logic from individual scripts for better testing
+- Easily modify transformation logic 
 
 
-## How to use 
+## How to - My First MTF Pipeline 
 > Ensure you understand the basic concepts of the framework before using it. See Transformation Core Concepts below.
-
 
 1. Create the mapping tables 
     - src/mappings/01_DEFINE_MAPPINGS.sql
@@ -61,4 +63,12 @@ The definitions of tables to join to when performing a transformation.
 Consider this the tables you ```JOIN``` to in a ```SELECT``` statement.
 
 ## Todo: 
-- Build Auto Install script 
+- Build Auto Install script fot MTF 
+- Build out a nice testing framework for MTF
+- Build Docs 
+- Build out the concept of stages.. I.E Staging -> Transformation -> Reporting
+- Build out the concept of data dictionaries
+- Build out the concept of data quality checks
+- Build out the concept of data lineage
+- Build out the concept of data versioning
+- Build a UI for MTF
