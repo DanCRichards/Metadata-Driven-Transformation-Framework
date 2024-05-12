@@ -1,3 +1,4 @@
+SET SEARCH_PATH=mtf;
 CREATE OR REPLACE FUNCTION safe_to_timestamp(text, text)
 RETURNS TIMESTAMP AS $$
 BEGIN

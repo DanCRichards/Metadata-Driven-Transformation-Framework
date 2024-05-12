@@ -1,4 +1,6 @@
-CREATE OR REPLACE PROCEDURE process_notes_transformation()
+CREATE OR REPLACE PROCEDURE perform_transformation(
+    input_transformation_key TEXT
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -7,44 +9,82 @@ DECLARE
     source_list TEXT := '';
     joins TEXT := '';
     record RECORD;
+    input_clause TEXT;
+    function_inputs RECORD;
+    condition_record RECORD;
+    input_source_table_name TEXT;
+    input_target_table_name TEXT;
 BEGIN
-    -- Initialize SQL for insert
+
+    /* Declare the source and target table names */
+    SELECT target_table_name, source_table_name INTO input_target_table_name, input_source_table_name
+    FROM transformations
+    WHERE transformation_key = input_transformation_key;
+
+    /* Initialise the SQL statement with the target table name */
     SELECT 'INSERT INTO ' || target_table_name INTO sql_text
     FROM transformations
-    WHERE source_table_name = 'landing.notes' AND target_table_name = 'staging.notes';
+    WHERE source_table_name = input_source_table_name AND target_table_name = input_target_table_name;
 
     sql_text := sql_text || ' (';
 
-    -- Loop through target mappings to build target column list and source value list
-    FOR record IN SELECT tm.target_table_name, tm.target_column_name, tm.function_name, im.source_table_name, im.source_column_name, jm.join_type, jm.join_condition
+    /* Loop through target mappings to build target column list and source value list */
+    FOR record IN SELECT tm.target_table_name, tm.target_column_name, tm.function_name
                   FROM target_mapping tm
-                  LEFT JOIN input_mapping im ON tm.target_table_name = im.target_table_name AND tm.target_column_name = im.target_column_name
-                  LEFT JOIN join_mappings jm ON jm.source_table_name = im.source_table_name AND jm.target_table_name = tm.target_table_name
-                  WHERE tm.target_table_name = 'staging.notes'
+                  WHERE tm.target_table_name = input_target_table_name
     LOOP
         -- Add columns to the insert list
         IF record.target_column_name IS NOT NULL THEN
             target_list := target_list || quote_ident(record.target_column_name) || ', ';
         END IF;
 
-        IF record.source_table_name IS NOT NULL AND TRIM(record.source_table_name) <> '' THEN
-            -- When there is a source_table_name, build using table and column
-            source_list := source_list || ' ' || record.function_name || '(' || record.source_table_name || '.' || quote_ident(record.source_column_name) || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
+        -- Reset input_clause for each column
+        input_clause := '';
+
+        -- Collect all inputs for this function/target column
+        FOR function_inputs IN SELECT im.source_table_name, im.source_column_name
+                               FROM input_mapping im
+                               WHERE im.target_table_name = record.target_table_name
+                                 AND im.target_column_name = record.target_column_name
+                               ORDER BY im.input_order
+        LOOP
+            -- Construct input_clause based on presence of a source table
+            IF function_inputs.source_table_name IS NOT NULL AND TRIM(function_inputs.source_table_name) <> '' THEN
+                input_clause := input_clause || function_inputs.source_table_name || '.' || quote_ident(function_inputs.source_column_name) || ', ';
+            ELSE
+                input_clause := input_clause || '''' || function_inputs.source_column_name || '''' || ', ';
+            END IF;
+        END LOOP;
+
+        -- Remove the trailing comma and space from input_clause
+        input_clause := TRIM(TRAILING ', ' FROM input_clause);
+
+        -- Build source list using function if applicable or directly use the column
+        IF record.function_name IS NOT NULL AND input_clause <> '' THEN
+            source_list := source_list || ' ' || record.function_name || '(' || input_clause || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
         ELSE
-            -- Handling case where there's a function, but no table name (treating source_column_name as a constant or predefined value)
-            source_list := source_list || ' ' || record.function_name || '(' || quote_literal(record.source_column_name) || ')' || ' AS ' || quote_ident(record.target_column_name) || ', ';
+            -- Directly use the input_clause as the source when no function is specified
+            source_list := source_list || ' ' || input_clause || ' AS ' || quote_ident(record.target_column_name) || ', ';
         END IF;
+    END LOOP;
 
+    -- Build joins from join mappings and their conditions
+    FOR record IN SELECT jm.join_mapping_key, jm.join_type, jm.join_table_name
+                  FROM join_mappings jm
+                  WHERE jm.transformation_key = 'test_notes'
+    LOOP
+        joins := joins || ' ' || record.join_type || ' JOIN ' || record.join_table_name || ' ON ';
 
-        -- Add joins if applicable
-        IF record.join_type IS NOT NULL AND record.join_condition IS NOT NULL AND record.source_table_name IS NOT NULL THEN
-            joins := joins || ' ' || record.join_type || ' JOIN ' || record.source_table_name || ' ON ' || record.join_condition || ' ';
-        END IF;
+        -- Append all conditions for this join
+        FOR condition_record IN SELECT jcm.lhs_column, jcm.rhs_column, jcm.operator
+                                FROM join_conditions_mapping jcm
+                                WHERE jcm.join_mapping_key = record.join_mapping_key
+        LOOP
+            joins := joins || condition_record.lhs_column || ' ' || condition_record.operator || ' ' || condition_record.rhs_column || ' AND ';
+        END LOOP;
 
-        -- Add joins if applicable
-        IF record.join_type IS NOT NULL AND record.join_condition IS NOT NULL AND record.source_table_name IS NOT NULL THEN
-            joins := joins || ' ' || record.join_type || ' JOIN ' || record.source_table_name || ' ON ' || record.join_condition || ' ';
-        END IF;
+        -- Remove the trailing ' AND '
+        joins := RTRIM(joins, ' AND ');
     END LOOP;
 
     -- Remove trailing commas and finalize the SQL statement

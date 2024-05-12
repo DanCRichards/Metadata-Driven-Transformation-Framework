@@ -2,7 +2,8 @@ CREATE SCHEMA IF NOT EXISTS mtf; -- meta transformation framework
 SET SEARCH_PATH = mtf;
 
 -- Drop existing tables and types if they exist
-DROP TABLE IF EXISTS join_mappings;
+DROP TABLE IF EXISTS join_mappings CASCADE ;
+DROP TABLE IF EXISTS join_conditions_mapping CASCADE ;
 DROP TABLE IF EXISTS input_mapping;
 DROP TABLE IF EXISTS target_mapping;
 DROP TABLE IF EXISTS transformations;
@@ -12,6 +13,16 @@ DROP TYPE IF EXISTS join_type CASCADE;
 
 -- Recreate enum for join types
 CREATE TYPE join_type AS ENUM ('INNER', 'LEFT', 'RIGHT', 'FULL JOIN');
+
+
+DROP TYPE IF EXISTS function_name CASCADE;  -- Drop existing enum type if it exists, cascading to dependent objects
+CREATE TYPE function_name AS ENUM (
+    '',
+    'safe_to_timestamp',
+    'str_to_boolean',
+    'return_enum'
+    );
+
 
 -- Functions table
 CREATE TABLE functions
@@ -32,10 +43,12 @@ CREATE TABLE function_inputs
 -- Transformations table using natural keys
 CREATE TABLE transformations
 (
+    transformation_key TEXT,
     source_table_name TEXT,
     target_table_name TEXT,
     description TEXT,
-    PRIMARY KEY (source_table_name, target_table_name)
+    PRIMARY KEY (source_table_name, target_table_name),
+    UNIQUE (transformation_key)
 );
 
 -- Target Mapping table using natural keys
@@ -65,19 +78,19 @@ CREATE TABLE input_mapping
 -- Join Mappings table using transformation natural keys
 CREATE TABLE join_mappings
 (
+    transformation_key TEXT,
     join_mapping_key TEXT PRIMARY KEY,  -- Human-readable, string-based identifier
-    source_table_name TEXT,
-    target_table_name TEXT,
-    join_type join_type,  -- ENUM type for join methods such as 'INNER', 'LEFT', etc.
-    FOREIGN KEY (source_table_name, target_table_name) REFERENCES transformations(source_table_name, target_table_name) ON DELETE CASCADE
+    join_table_name TEXT,
+    join_type join_type, -- ENUM type for join methods such as 'INNER', 'LEFT', etc.
+    FOREIGN KEY (transformation_key) REFERENCES transformations(transformation_key) ON DELETE CASCADE
 );
 
 CREATE TABLE join_conditions_mapping
 (
     condition_id SERIAL PRIMARY KEY,
-    join_mapping_id INT NOT NULL,
+    join_mapping_key TEXT NOT NULL,
     lhs_column TEXT NOT NULL,  -- Left-hand side of the condition, typically a column name
     rhs_column TEXT NOT NULL,  -- Right-hand side of the condition, can be a column name or a literal value
     operator TEXT NOT NULL CHECK (operator IN ('=', '!=', '<', '>', '<=', '>=')), -- Comparison operator
-    FOREIGN KEY (join_mapping_id) REFERENCES join_mappings(join_mapping_key) ON DELETE CASCADE
+    FOREIGN KEY (join_mapping_key) REFERENCES join_mappings(join_mapping_key) ON DELETE CASCADE
 );
